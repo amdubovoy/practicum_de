@@ -1,0 +1,63 @@
+services:
+    postgres:
+        container_name: practicum_postgres
+        image: postgres:latest
+        restart: always
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: postgres
+        volumes:
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+        ports:
+            - "5432:5432"
+        networks:
+            - network
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
+
+    pgadmin:
+        container_name: practicum_pgadmin
+        image: dpage/pgadmin4
+        environment:
+            PGADMIN_DEFAULT_EMAIL: admin@admin.com
+            PGADMIN_DEFAULT_PASSWORD: admin
+        volumes:
+            - ./pgadmin:/var/lib/pgadmin
+        ports:
+            - "9055:80"
+        networks:
+            - network
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    airflow:
+        container_name: practicum_airflow
+        image: apache/airflow
+        restart: always
+        environment:
+            AIRFLOW__CORE__EXECUTOR: LocalExecutor
+            AIRFLOW__CORE__LOAD_EXAMPLES: False
+            AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: False
+            AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+        volumes:
+            - ./dags:/opt/airflow/dags
+            - ./init.sh:/init.sh
+        ports:
+            - "9054:8080"
+        networks:
+            - network
+        entrypoint: sh -c "chmod +x /init.sh && /init.sh"
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+networks:
+    network:
+        driver: bridge
