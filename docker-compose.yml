@@ -2,7 +2,6 @@ services:
     postgres:
         container_name: practicum_postgres
         image: postgres:latest
-        restart: always
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
@@ -13,12 +12,12 @@ services:
             - "5432:5432"
         networks:
             - network
+        restart: unless-stopped
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             interval: 5s
             timeout: 5s
             retries: 5
-        restart: unless-stopped
 
     pgadmin:
         container_name: practicum_pgadmin
@@ -40,7 +39,6 @@ services:
     airflow:
         container_name: practicum_airflow
         image: apache/airflow
-        restart: always
         environment:
             AIRFLOW__CORE__EXECUTOR: LocalExecutor
             AIRFLOW__CORE__LOAD_EXAMPLES: False
@@ -54,6 +52,7 @@ services:
         networks:
             - network
         entrypoint: sh -c "chmod +x /init.sh && /init.sh"
+        restart: unless-stopped
         depends_on:
             postgres:
                 condition: service_healthy
